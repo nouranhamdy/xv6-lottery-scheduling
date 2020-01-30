@@ -87,9 +87,9 @@ allocproc(void)
   return 0;
 
 found:
-  p->tickets=10;   /////////each proc has initially 10 tickets//////////////////////
   p->state = EMBRYO;
   p->pid = nextpid++;
+  p->tickets = 1;
 
   release(&ptable.lock);
 
@@ -313,25 +313,6 @@ wait(void)
   }
 }
 
-///////////////////////////////////////////////////////////////////////////
-/*
-int
-procstat(struct stat *pst)
-{
-  struct proc *p;
-  if(p->state == RUNNABLE){
-    pst->tickets = p->tickets;
-    pst->pid = p->pid;
-    return 0;
-  }
-  return 1;
-    
-}
-*/
-///////////////////////////////////////////////////////////////////////////
-
-
-
 //PAGEBREAK: 42
 // Per-CPU process scheduler.
 // Each CPU calls scheduler() after setting itself up.
@@ -379,7 +360,7 @@ scheduler(void)
       
 ///////generate random integer///////////////////////////////////////////////
       randomticket = random_at_most(totaltickets);
-      if(randomticket >= p->startticketrange && randomticket =< p->endticketrange)
+      if(randomticket >= p->startticketrange && randomticket <= p->endticketrange)
       {
 
         // Switch to chosen process.  It is the process's job
@@ -402,7 +383,6 @@ scheduler(void)
 
   }
 }
-
 // Enter scheduler.  Must hold only ptable.lock
 // and have changed proc->state. Saves and restores
 // intena because intena is a property of this
@@ -580,5 +560,48 @@ procdump(void)
     cprintf("\n");
   }
 }
+// /usr/bin/env stap
 
+//
+//Print the system call count by process name in descending order.
+//
+
+int getpinfo ()
+{      
+struct proc *p;
+sti();
+acquire(&ptable.lock);
+cprintf("used \t pid  \t\t tickets \t ticks \n");
+for( p = ptable.proc ; p < &ptable.proc[NPROC] ; p++){
+if ( p->state == SLEEPING){
+p->used = 0;
+cprintf ("%d \t %d \t \t %d \n " , p->used , p->pid,p->tickets,ticks);}
+else if ( p->state == RUNNING){
+p->used = 1;
+cprintf ("%d \t %d \t \t  %d \n " , p->used , p->pid,p->tickets,ticks);}
+
+else if ( p->state == RUNNABLE){
+p->used = 0;
+cprintf ("%d \t %d \t \t %d \n " , p->used, p->pid,p->tickets,ticks);
+}}
+release(&ptable.lock);
+return 22;
+}
+
+
+int 
+settickets(int pid,int Ntickets){
+
+struct proc *p;
+acquire(&ptable.lock);
+for(p = ptable.proc;p<&ptable.proc[NPROC] ; p++){
+  if(p->pid == pid){
+    p->tickets = Ntickets;
+    break; 
+ }
+}
+release(&ptable.lock);
+return pid;
+
+}
 
