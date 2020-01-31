@@ -52,6 +52,8 @@ struct proc {
   int tickets;                 // tickets hold by each process for lottery//////////////////////
   int startticketrange;        // for tickets range per process/////////////////////////////////
   int endticketrange;
+  int used;
+  uint ticks;
 
 };
 
