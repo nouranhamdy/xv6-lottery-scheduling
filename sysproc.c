@@ -104,26 +104,36 @@ sys_getreadcount(void)
 int
 sys_settickets(void)
 {
-  int pid;
+  
   int n;
   if(argint(0, &n) < 0)
     return -1;
-  if(argint(0, &pid) < 0)
-    return -1;
-
-  return settickets(pid,n);
+  
+  return settickets(n);
 }
 
 int
 sys_getpinfo(void)
 {
-/*
-  struct pstat *pst;
-  if(argptr(0, (void*)&pst, sizeof(pstat.pst)) < 0)
+
+  struct pstat* pst;  
+  if(argptr(0, (void*)&pst, sizeof(struct pstat*))<0)
     return -1;
-  
-  return 0;
-*/
-return getpinfo();
+ 
+  return getpinfo(pst) ;
+
+
 }
+/*
+int
+sys_clone(void)
+{
+}
+
+
+int
+sys_join(void)
+{
+}
+*/
 

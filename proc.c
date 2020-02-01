@@ -92,7 +92,6 @@ found:
   p->state = EMBRYO;
   p->pid = nextpid++;
   p->tickets = 1;
-  p->used=0;
   p->ticks = 0;
   
   release(&ptable.lock);
@@ -327,6 +326,7 @@ wait(void)
 //  - swtch to start running that process
 //  - eventually that process transfers control
 //      via swtch back to the scheduler.
+
 void
 scheduler(void)
 {
@@ -353,9 +353,10 @@ scheduler(void)
 
 //////loop over process table counting total number of tickets for runnable proc///////////////
     for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
-      if(p->state == RUNNABLE)
+      if(p->state == RUNNABLE){
         totaltickets += p->tickets;
-        
+        //p->tickets=totaltickets;
+        }
       
     }
 
@@ -384,7 +385,7 @@ scheduler(void)
         switchuvm(p);
         p->state = RUNNING;
         p->ticks++;
-
+        //p->tickets=totaltickets;
 
         swtch(&(c->scheduler), p->context);
         switchkvm();
@@ -399,6 +400,85 @@ scheduler(void)
 
   }
 }
+
+
+
+
+/*
+void
+scheduler(void)
+{
+///////////////////////////////////
+  int totaltickets =0;
+  int randomticket=0;
+//////////////////////////////////
+  struct proc *p;
+  struct cpu *c = mycpu();
+  c->proc = 0;
+  
+  for(;;){
+    // Enable interrupts on this processor.
+    sti();
+
+
+   // Loop over process table looking for process to run.
+    acquire(&ptable.lock);  
+
+    totaltickets =0;
+    randomticket=0;
+    
+//////loop over process table counting total number of tickets for runnable proc///////////////
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state == RUNNABLE){
+        p->startticketrange = totaltickets;
+        p->endticketrange = p->startticketrange + p->tickets - 1;
+        totaltickets += p->tickets;
+        
+      } 
+    }
+
+///////generate random integer///////////////////////////////////////////////
+      randomticket = random_at_most(totaltickets);
+      
+   
+    for(p = ptable.proc; p < &ptable.proc[NPROC]; p++){
+      if(p->state != RUNNABLE)
+        continue;
+
+
+      
+
+      if(randomticket >= p->startticketrange && randomticket <= p->endticketrange)
+      {
+
+        // Switch to chosen process.  It is the process's job
+        // to release ptable.lock and then reacquire it
+       // before jumping back to us.
+        c->proc = p;
+        switchuvm(p);
+        p->state = RUNNING;
+        p->ticks++;
+        
+
+        swtch(&(c->scheduler), p->context);
+        switchkvm();
+        
+        // Process is done running for now.
+        // It should have changed its p->state before coming back.
+        c->proc = 0;
+        break;    //////////when a proc runs this break is used to exit the loop to prevent      increasing value of tatal tickets over the random value//////////////////////////////////
+      }
+    }
+    release(&ptable.lock);
+
+  }
+}
+*/
+
+
+
+
+
 // Enter scheduler.  Must hold only ptable.lock
 // and have changed proc->state. Saves and restores
 // intena because intena is a property of this
@@ -583,33 +663,6 @@ procdump(void)
 //
 
 
-/////////////////////////////////pstat info////////////////////////////
-
-/* 
-struct pstat*
-getpstat (void)
-{ 
-  struct pstat *pst ;
-  acquire(&ptable.lock); 
-  for(int i=0; i < NPROC ; ++i){
-    struct proc p = ptable.proc[i];
-    if(p.state == UNUSED){
-      pst->inuse[i]=0;
-    }
-    else{
-      pst->inuse[i]=1;
-    }
-    pst->tickets[i] = p.tickets;
-    pst->ticks[i] = p.ticks;
-    pst->pid[i] = p.pid;
-     
-  }
-  
-  release(&ptable.lock);
-  return pst;
-}
-*/
-
 int
 getpinfo (struct pstat* pst)
 {   
@@ -618,19 +671,12 @@ getpinfo (struct pstat* pst)
   for(int i=0; i < NPROC ; ++i){
     struct proc p = ptable.proc[i];
          
-    if ( p.state == SLEEPING){
+    if ( p.state == UNUSED)
       pst->inuse[i] = 0;
-      
-   }
-    else if ( p.state == RUNNING){
+    else 
       pst->inuse[i] = 1;
-     
-    }
-
-    else if ( p.state == RUNNABLE){
-      pst->inuse[i] = 0;
       
-    }
+  
     pst->tickets[i] = p.tickets;
     pst->ticks[i] = p.ticks;
     pst->pid[i] = p.pid;
@@ -643,34 +689,10 @@ getpinfo (struct pstat* pst)
 }
 
 
-/*
-int getpinfo ()
-{      
-struct proc *p;
-sti();
-acquire(&ptable.lock);
-cprintf("used \t pid  \t tickets \t ticks \n");
-for( p = ptable.proc ; p < &ptable.proc[NPROC] ; p++){
-  if ( p->state == UNUSED)
-    p->used = 0;
-  else if ( p->state == RUNNING)
-    p->used = 5;
-  else
-    p->used = 1;
-
-  cprintf ("%d \t %d \t %d \t\t  %d \n " , p->used , p->pid , p->tickets , p->ticks);
-
-}
-release(&ptable.lock);
-return 0;
-}
-*/
-
 int 
 settickets(int Ntickets){
   struct proc *p = myproc();
   p->tickets = Ntickets;
-  p->used=100;
   return 0;
 
 }

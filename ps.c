@@ -10,7 +10,7 @@
 
 int main (int argc,char *argv[]){
 
-
+  while(1){
   struct pstat *pst = malloc(sizeof(struct pstat));
   getpinfo(pst);
   printf(1,"used \t pid  \t tickets \t ticks \n");
@@ -18,7 +18,8 @@ int main (int argc,char *argv[]){
   printf (1,"%d \t %d \t %d \t\t %d \n " , pst->inuse[i] , pst->pid[i],pst->tickets[i],
     pst->ticks[i]);
   }
-    
+  sleep(200);
+  }  
   exit();
 }
 
